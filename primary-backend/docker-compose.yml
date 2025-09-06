@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: artisan-connect-db
+    environment:
+      POSTGRES_DB: artisan_connect
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - artisan-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: artisan-connect-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - artisan-network
+
+volumes:
+  postgres_data:
+
+networks:
+  artisan-network:
+    driver: bridge

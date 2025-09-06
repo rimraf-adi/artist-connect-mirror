@@ -1,0 +1,808 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===== ENUMS =====
+enum Role {
+  ARTISAN
+  CUSTOMER
+  ADMIN
+  MODERATOR
+}
+
+enum Platform {
+  INSTAGRAM
+  TWITTER
+  FACEBOOK
+  YOUTUBE
+  TIKTOK
+  PINTEREST
+  SHOPIFY
+  AMAZON
+  ETSY
+  FLIPKART
+  MYNTRA
+  CUSTOM
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  RAZORPAY
+  STRIPE
+  PAYPAL
+  CASH_ON_DELIVERY
+  BANK_TRANSFER
+  UPI
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum CampaignType {
+  BRAND_AWARENESS
+  ENGAGEMENT
+  SALES
+  TRAFFIC
+  LEAD_GENERATION
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum TrainingModuleType {
+  VIDEO
+  ARTICLE
+  INTERACTIVE
+  QUIZ
+  WORKSHOP
+}
+
+enum CommunityPostType {
+  QUESTION
+  SHOWCASE
+  COLLABORATION_REQUEST
+  TIP
+  ANNOUNCEMENT
+}
+
+enum ShippingProvider {
+  INDIA_POST
+  BLUE_DART
+  DELHIVERY
+  ECOM_EXPRESS
+  FEDEX
+  DHL
+  ARAMEX
+  LOCAL_COURIER
+}
+
+enum ReviewSource {
+  PLATFORM
+  GOOGLE
+  FACEBOOK
+  TRUSTPILOT
+  CUSTOMER_FEEDBACK
+}
+
+enum BrandElementType {
+  COLOR_PALETTE
+  TYPOGRAPHY
+  LOGO_DESIGN
+  BRAND_VOICE
+  VISUAL_STYLE
+  TAGLINE
+}
+
+// ===== CORE MODELS =====
+model Artisan {
+  id                String   @id @default(uuid())
+  name              String
+  phone             String?  @unique
+  email             String   @unique
+  passwd            String
+  role              Role     @default(ARTISAN)
+  languages         String[] @default([])
+  createdAt         DateTime @default(now())
+  lastEditedAt      DateTime?
+  verified          Boolean  @default(false)
+  shopify           Boolean  @default(false)
+  
+  // Profile information
+  bio               String?
+  location          String?
+  website           String?
+  profileImage      String?
+  coverImage        String?
+  businessName      String?
+  gstNumber         String?
+  panNumber         String?
+  
+  // Social media presence
+  instagramHandle   String?
+  twitterHandle     String?
+  facebookPage      String?
+  youtubeChannel    String?
+  
+  // Skills and expertise
+  primaryCraft      String?
+  craftCategories   String[] @default([])
+  experienceYears   Int?
+  skillLevel        SkillLevel?
+  
+  // Business metrics
+  totalSales        Float    @default(0)
+  averageRating     Float    @default(0)
+  totalReviews      Int      @default(0)
+  
+  // Relations
+  listings          Listing[]
+  orders            Order[]
+  socialAccounts    SocialAccount[]
+  socialPosts       SocialPost[]
+  campaigns         Campaign[]
+  aiInsights        AIInsight[]
+  competitionAnalyses CompetitionAnalysis[]
+  skills            ArtisanSkill[]
+  communityPosts    CommunityPost[]
+  communityComments CommunityComment[]
+  communityLikes    CommunityLike[]
+  trainingProgress  TrainingProgress[]
+  brandElements     BrandElement[]
+  reviews           Review[]
+  shippingProfiles  ShippingProfile[]
+  payouts           Payout[]
+  stories           ArtisanStory[]
+  pricingRules      PricingRule[]
+  analyticsSnapshots AnalyticsSnapshot[]
+  
+  @@index([verified])
+  @@index([primaryCraft])
+  @@index([location])
+  @@index([skillLevel])
+  @@index([createdAt])
+  @@index([averageRating])
+  @@index([totalSales])
+}
+model Listing {
+  id               String   @id @default(uuid())
+  artisan          Artisan @relation(fields: [artisanId], references: [id])
+  artisanId        String
+  title            String
+  shortDescription String?
+  longDescription  String?
+  language         String   @default("en")
+  price            Float?
+  currency         String   @default("INR")
+  stock            Int      @default(0)
+  published        Boolean  @default(false)
+  tags             String[] @default([])
+  platformMetadata Json?    
+  // embeddings       Json?  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  images           ListingImage[]
+  priceBreakdowns  PriceBreakdown[]
+  inventorySnapshots InventorySnapshot[]
+  orderItems       OrderItem[]
+  pricingSuggestions PricingSuggestion[]
+  inventoryAlerts  InventoryAlert[]
+
+  @@index([artisanId])
+  @@index([published])
+  @@index([tags])
+  @@index([price])
+  @@index([currency])
+  @@index([createdAt])
+  @@index([language])
+}
+
+model ListingImage {
+  id         String   @id @default(uuid())
+  listing    Listing  @relation(fields: [listingId], references: [id])
+  listingId  String
+  uri        String
+  role       String?  // raw, processed, thumbnail, mockup
+  width      Int?
+  height     Int?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([listingId])
+}
+
+
+model PriceBreakdown {
+  id                 String   @id @default(uuid())
+  listing            Listing  @relation(fields: [listingId], references: [id])
+  listingId          String
+  materialCost       Float?
+  laborCost          Float?
+  overhead           Float?
+  suggestedRetail    Float?
+  suggestedWholesale Float?
+  currency           String   @default("INR")
+  computedBy         String?  // 'ai' or 'manual'
+  createdAt          DateTime @default(now())
+
+  @@index([listingId])
+}
+model InventorySnapshot {
+  id          String   @id @default(uuid())
+  listing     Listing  @relation(fields: [listingId], references: [id])
+  listingId   String
+  available   Int
+  reserved    Int      @default(0)
+  recordedAt  DateTime @default(now())
+
+  @@index([listingId, recordedAt])
+}
+model Order {
+  id              String      @id @default(uuid())
+  artisan         Artisan     @relation(fields: [artisanId], references: [id])
+  artisanId       String
+  platform        Platform
+  externalOrderId String?     // platform-specific
+  grossAmount     Float?
+  fees            Float?
+  netAmount       Float?
+  currency        String      @default("INR")
+  status          OrderStatus @default(PENDING)
+  placedAt        DateTime?
+  updatedAt       DateTime?   @updatedAt
+  shippingInfo    Json?
+  paymentInfo     Json?
+
+  items           OrderItem[]
+  payments        Payment[]
+  shipments       Shipment[]
+
+  @@index([artisanId])
+  @@index([platform, externalOrderId])
+  @@index([status])
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  order      Order    @relation(fields: [orderId], references: [id])
+  orderId    String
+  listing    Listing  @relation(fields: [listingId], references: [id])
+  listingId  String
+  qty        Int
+  unitPrice  Float?
+  totalPrice Float?
+
+  @@index([orderId])
+  @@index([listingId])
+}
+
+model Payment {
+  id                  String         @id @default(uuid())
+  order               Order?         @relation(fields: [orderId], references: [id])
+  orderId             String?
+  provider            PaymentProvider
+  providerPaymentId   String?
+  amount              Float?
+  currency            String         @default("INR")
+  status              PaymentStatus?
+  metadata            Json?
+  createdAt           DateTime       @default(now())
+
+  @@index([orderId])
+  @@index([provider])
+  @@index([status])
+}
+
+model Payout {
+  id          String       @id @default(uuid())
+  artisan     Artisan      @relation(fields: [artisanId], references: [id])
+  artisanId   String
+  amount      Float
+  currency    String       @default("INR")
+  payoutDate  DateTime?
+  status      PayoutStatus?
+  details     Json?
+  createdAt   DateTime     @default(now())
+
+  @@index([artisanId])
+  @@index([status])
+}
+
+/*
+  Social & Marketing
+*/
+
+model SocialAccount {
+  id           String   @id @default(uuid())
+  artisan      Artisan? @relation(fields: [artisanId], references: [id])
+  artisanId    String?
+  platform     String
+  externalId   String?
+  username     String?
+  accessToken  Json?    // store reference or encrypted token pointer
+  tokenMeta    Json?
+  createdAt    DateTime @default(now())
+
+  socialPosts  SocialPost[]
+
+  @@index([artisanId])
+  @@index([platform])
+}
+
+model SocialPost {
+  id             String   @id @default(uuid())
+  artisan        Artisan @relation(fields: [artisanId], references: [id])
+  artisanId      String
+  platform       String
+  externalPostId String?
+  caption        String?
+  mediaUris      String[] @default([])
+  publishDate    DateTime?
+  metrics        Json?    // impressions/likes/comments stored as JSON snapshots
+  createdAt      DateTime @default(now())
+
+  @@index([artisanId])
+  @@index([platform, publishDate])
+}
+
+// ===== MARKETING & CAMPAIGNS =====
+model Campaign {
+  id         String        @id @default(uuid())
+  artisan    Artisan       @relation(fields: [artisanId], references: [id])
+  artisanId  String
+  name       String
+  objective  String?
+  type       CampaignType?
+  startDate  DateTime?
+  endDate    DateTime?
+  status     CampaignStatus @default(DRAFT)
+  budget     Float?
+  currency   String        @default("INR")
+  metadata   Json?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  posts      CampaignPost[]
+
+  @@index([artisanId])
+  @@index([status])
+  @@index([type])
+}
+
+model CampaignPost {
+  id           String      @id @default(uuid())
+  campaign     Campaign    @relation(fields: [campaignId], references: [id])
+  campaignId   String
+  socialPost   SocialPost? @relation(fields: [socialPostId], references: [id])
+  socialPostId String?
+  scheduledAt  DateTime?
+  status       String?
+  createdAt    DateTime    @default(now())
+
+  @@index([campaignId])
+  @@index([scheduledAt])
+}
+
+// ===== AI INSIGHTS & COMPETITION ANALYSIS =====
+model AIInsight {
+  id          String   @id @default(uuid())
+  artisan     Artisan  @relation(fields: [artisanId], references: [id])
+  artisanId   String
+  type        String   // pricing | storytelling | campaign | forecast | shipping-suggestion | brand
+  inputRef    Json?    // pointers to listings/orders/posts used as input
+  output      Json?    // AI-generated result
+  confidence  Float?   // AI confidence score
+  createdAt   DateTime @default(now())
+
+  @@index([artisanId])
+  @@index([type])
+}
+
+model CompetitionAnalysis {
+  id              String   @id @default(uuid())
+  artisan         Artisan  @relation(fields: [artisanId], references: [id])
+  artisanId       String
+  competitorName  String
+  competitorUrl   String?
+  analysisType    String   // pricing | marketing | product | brand
+  insights        Json?    // AI-generated insights
+  recommendations Json?    // AI recommendations
+  createdAt       DateTime @default(now())
+
+  @@index([artisanId])
+  @@index([analysisType])
+}
+
+// ===== SKILL SHOWCASE =====
+model ArtisanSkill {
+  id          String     @id @default(uuid())
+  artisan     Artisan    @relation(fields: [artisanId], references: [id])
+  artisanId   String
+  skillName   String
+  description String?
+  level       SkillLevel
+  yearsExperience Int?
+  certifications String[]
+  portfolioItems String[] @default([])
+  isVerified  Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+
+  @@index([artisanId])
+  @@index([skillName])
+  @@index([level])
+}
+
+// ===== COMMUNITY & COLLABORATION =====
+model CommunityPost {
+  id          String            @id @default(uuid())
+  artisan     Artisan           @relation(fields: [artisanId], references: [id])
+  artisanId   String
+  type        CommunityPostType
+  title       String
+  content     String
+  tags        String[]          @default([])
+  images      String[]          @default([])
+  isPublic    Boolean           @default(true)
+  likes       Int               @default(0)
+  comments    Int               @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  comments    CommunityComment[]
+  likes       CommunityLike[]
+
+  @@index([artisanId])
+  @@index([type])
+  @@index([isPublic])
+  @@index([createdAt])
+}
+
+model CommunityComment {
+  id        String        @id @default(uuid())
+  post      CommunityPost @relation(fields: [postId], references: [id])
+  postId    String
+  artisan   Artisan       @relation(fields: [artisanId], references: [id])
+  artisanId String
+  content   String
+  createdAt DateTime      @default(now())
+
+  @@index([postId])
+  @@index([artisanId])
+}
+
+model CommunityLike {
+  id        String        @id @default(uuid())
+  post      CommunityPost @relation(fields: [postId], references: [id])
+  postId    String
+  artisan   Artisan       @relation(fields: [artisanId], references: [id])
+  artisanId String
+  createdAt DateTime      @default(now())
+
+  @@unique([postId, artisanId])
+  @@index([postId])
+  @@index([artisanId])
+}
+
+// ===== TRAINING & GUIDANCE =====
+model TrainingModule {
+  id          String              @id @default(uuid())
+  title       String
+  description String?
+  type        TrainingModuleType
+  content     Json?               // video URL, article content, etc.
+  duration    Int?                // in minutes
+  difficulty  SkillLevel
+  tags        String[]            @default([])
+  isActive    Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  progress    TrainingProgress[]
+
+  @@index([type])
+  @@index([difficulty])
+  @@index([isActive])
+}
+
+model TrainingProgress {
+  id          String         @id @default(uuid())
+  artisan     Artisan        @relation(fields: [artisanId], references: [id])
+  artisanId   String
+  module      TrainingModule @relation(fields: [moduleId], references: [id])
+  moduleId    String
+  status      String         @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED
+  progress    Float          @default(0) // 0-100
+  completedAt DateTime?
+  createdAt   DateTime       @default(now())
+
+  @@unique([artisanId, moduleId])
+  @@index([artisanId])
+  @@index([moduleId])
+}
+
+// ===== BRAND IDENTITY =====
+model BrandElement {
+  id          String           @id @default(uuid())
+  artisan     Artisan          @relation(fields: [artisanId], references: [id])
+  artisanId   String
+  type        BrandElementType
+  name        String
+  value       String           // color hex, font name, etc.
+  description String?
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+
+  @@index([artisanId])
+  @@index([type])
+  @@index([isActive])
+}
+
+// ===== REVIEW AGGREGATION =====
+model Review {
+  id          String      @id @default(uuid())
+  artisan     Artisan     @relation(fields: [artisanId], references: [id])
+  artisanId   String
+  source      ReviewSource
+  externalId  String?     // ID from external platform
+  rating      Float
+  title       String?
+  content     String?
+  reviewerName String?
+  reviewerEmail String?
+  isVerified  Boolean     @default(false)
+  isPublic    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+
+  @@index([artisanId])
+  @@index([source])
+  @@index([rating])
+  @@index([isPublic])
+}
+
+// ===== SHIPPING MANAGEMENT =====
+model ShippingProfile {
+  id          String   @id @default(uuid())
+  artisan     Artisan  @relation(fields: [artisanId], references: [id])
+  artisanId   String
+  name        String
+  provider    ShippingProvider
+  isDefault   Boolean  @default(false)
+  cost        Float?
+  currency    String   @default("INR")
+  estimatedDays Int?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([artisanId])
+  @@index([provider])
+  @@index([isActive])
+}
+
+model Shipment {
+  id              String   @id @default(uuid())
+  order           Order    @relation(fields: [orderId], references: [id])
+  orderId         String
+  trackingNumber  String?
+  provider        ShippingProvider
+  status          String   @default("PENDING")
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  estimatedDelivery DateTime?
+  trackingUrl     String?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  @@index([orderId])
+  @@index([trackingNumber])
+  @@index([status])
+}
+
+// ===== STORYTELLING ASSISTANT =====
+model StoryTemplate {
+  id          String   @id @default(uuid())
+  title       String
+  category    String   // product, brand, artisan, craft
+  template    String   // story template with placeholders
+  variables   String[] @default([]) // available variables
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([category])
+  @@index([isActive])
+}
+
+model ArtisanStory {
+  id          String   @id @default(uuid())
+  artisan     Artisan  @relation(fields: [artisanId], references: [id])
+  artisanId   String
+  title       String
+  content     String
+  type        String   // product, brand, personal, craft
+  templateId  String?  // reference to StoryTemplate
+  isPublic    Boolean  @default(true)
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([artisanId])
+  @@index([type])
+  @@index([isPublished])
+}
+
+// ===== PRICING ASSISTANT =====
+model PricingRule {
+  id          String   @id @default(uuid())
+  artisan     Artisan  @relation(fields: [artisanId], references: [id])
+  artisanId   String
+  name        String
+  category    String   // material, labor, overhead, profit
+  ruleType    String   // percentage, fixed, formula
+  value       Float
+  conditions  Json?    // conditions when this rule applies
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([artisanId])
+  @@index([category])
+  @@index([isActive])
+}
+
+model PricingSuggestion {
+  id          String   @id @default(uuid())
+  listing     Listing  @relation(fields: [listingId], references: [id])
+  listingId   String
+  suggestedPrice Float
+  confidence  Float    // AI confidence score
+  reasoning   String?  // explanation for the suggestion
+  factors     Json?    // factors considered
+  createdAt   DateTime @default(now())
+
+  @@index([listingId])
+  @@index([suggestedPrice])
+}
+
+// ===== INVENTORY MANAGEMENT =====
+model InventoryAlert {
+  id          String   @id @default(uuid())
+  listing     Listing  @relation(fields: [listingId], references: [id])
+  listingId   String
+  alertType   String   // low_stock, out_of_stock, reorder
+  threshold   Int?     // stock level threshold
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([listingId])
+  @@index([alertType])
+  @@index([isActive])
+}
+
+// ===== ANALYTICS & METRICS =====
+model AnalyticsSnapshot {
+  id          String   @id @default(uuid())
+  artisan     Artisan  @relation(fields: [artisanId], references: [id])
+  artisanId   String
+  metricType  String   // sales, views, engagement, etc.
+  value       Float
+  period      String   // daily, weekly, monthly
+  date        DateTime
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([artisanId])
+  @@index([metricType])
+  @@index([period])
+  @@index([date])
+}
+
+/*
+  Moderation & Audit
+*/
+
+model Moderation {
+  id         String   @id @default(uuid())
+  entityType String   // listing, post, profile
+  entityId   String
+  reason     String?
+  status     String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdBy  String?  // user id who raised
+  reviewNotes String?
+  createdAt  DateTime @default(now())
+
+  @@index([status])
+  @@index([entityType, entityId])
+}
+
+// ===== AUDIT & LOGGING =====
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorUserId String?  // user id who performed the action
+  action      String
+  targetType  String?  // listing, order, profile, etc.
+  targetId    String?
+  payload     Json?    // additional data about the action
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([createdAt])
+  @@index([action])
+  @@index([targetType, targetId])
+}
+
+/*
+  ===== SCHEMA SUMMARY =====
+  
+  This comprehensive schema supports an AI-driven platform for local artisans with the following features:
+  
+  ✅ User Identity Management - Artisan model with roles, verification, and profile data
+  ✅ Listings Creator - Listing model with images, pricing, and inventory
+  ✅ Storytelling Assistant - StoryTemplate and ArtisanStory models
+  ✅ Pricing Assistant - PricingRule, PricingSuggestion, and PriceBreakdown models
+  ✅ Inventory Management - InventorySnapshot and InventoryAlert models
+  ✅ Order Management - Order, OrderItem, Payment, and Shipment models with cross-platform support
+  ✅ Social Media Analytics - SocialAccount, SocialPost models with metrics
+  ✅ Campaign Generator - Campaign and CampaignPost models
+  ✅ Competition Analysis - CompetitionAnalysis model
+  ✅ Brand Identity Assistant - BrandElement model for colors, fonts, etc.
+  ✅ Review Aggregator - Review model with multiple sources
+  ✅ Shipping Management - ShippingProfile and Shipment models with provider support
+  ✅ Skill Showcase - ArtisanSkill model with verification
+  ✅ Community & Collaboration - CommunityPost, CommunityComment, CommunityLike models
+  ✅ Training & Guidance - TrainingModule and TrainingProgress models
+  ✅ AI Insights - AIInsight model for various AI-powered features
+  ✅ Analytics - AnalyticsSnapshot model for metrics tracking
+  ✅ Moderation - Moderation model for content review
+  ✅ Audit Logging - AuditLog model for tracking changes
+  
+  The schema is optimized for performance with proper indexing and supports
+  both traditional e-commerce and modern social commerce features.
+*/
